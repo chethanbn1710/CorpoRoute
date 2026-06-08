@@ -49,6 +49,11 @@ public class UserService implements UserDetailsService {
         return userRepository.findById(id).orElse(null);
     }
 
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+
     public User updateUser(Long id, User userDetails) {
 
         User user = userRepository.findById(id).orElse(null);

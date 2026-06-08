@@ -2,6 +2,7 @@ package com.corporoute.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import com.corporoute.enums.RideStatus;
 
 import java.math.BigDecimal;
 
@@ -14,7 +15,13 @@ public class Ride {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String employeeName;
+    @ManyToOne
+    @JoinColumn(name = "employee_id")
+    private User employee;
+
+    @ManyToOne
+    @JoinColumn(name = "driver_id")
+    private User driver;
 
     private String pickupLocation;
 
@@ -22,7 +29,8 @@ public class Ride {
 
     private BigDecimal fare;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private RideStatus status;
 
     @ManyToOne
     @JoinColumn(name = "company_id")

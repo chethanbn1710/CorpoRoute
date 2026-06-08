@@ -1,19 +1,13 @@
 package com.corporoute.controller;
 
 import com.corporoute.entity.Ride;
+import com.corporoute.security.JwtUtil;
 import com.corporoute.service.RideService;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PathVariable;
-
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -22,20 +16,30 @@ import java.util.List;
 public class RideController {
 
     private final RideService rideService;
+    private final JwtUtil jwtUtil;
 
-    public RideController(RideService rideService) {
+    public RideController(RideService rideService, JwtUtil jwtUtil) {
         this.rideService = rideService;
+        this.jwtUtil = jwtUtil;
     }
 
-    
     @GetMapping
     public List<Ride> getAllRides() {
         return rideService.getAllRides();
     }
 
     @PostMapping
-    public Ride createRide(@RequestBody Ride ride) {
-        return rideService.createRide(ride);
+    public Ride createRide(
+            @RequestBody Ride ride,
+            HttpServletRequest request) {
+
+        String authHeader = request.getHeader("Authorization");
+
+        String token = authHeader.substring(7);
+
+        String email = jwtUtil.extractUsername(token);
+
+        return rideService.createRide(ride, email);
     }
 
     @GetMapping("/{id}")
@@ -44,7 +48,10 @@ public class RideController {
     }
 
     @PutMapping("/{id}")
-    public Ride updateRide(@PathVariable Long id,@RequestBody Ride ride) {
+    public Ride updateRide(
+            @PathVariable Long id,
+            @RequestBody Ride ride) {
+
         return rideService.updateRide(id, ride);
     }
 

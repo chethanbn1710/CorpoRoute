@@ -1,6 +1,7 @@
 package com.corporoute.service;
 
 import com.corporoute.entity.Company;
+import com.corporoute.exception.CompanyNotFoundException;
 import com.corporoute.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,7 @@ public class CompanyService {
 
     public Company getCompanyById(Long id) {
         return companyRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Company not found"));
+            .orElseThrow(() -> new CompanyNotFoundException("Company not found"));
     }
 
     public Company saveCompany(Company company) {

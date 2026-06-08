@@ -4,6 +4,8 @@ import com.corporoute.entity.Company;
 import com.corporoute.entity.User;
 import com.corporoute.repository.CompanyRepository;
 import com.corporoute.repository.UserRepository;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,11 +15,14 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
-                       CompanyRepository companyRepository) {
+                   CompanyRepository companyRepository,
+                   PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public User createUser(User user) {
@@ -28,6 +33,7 @@ public class UserService {
 
         user.setCompany(company);
 
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
@@ -46,7 +52,7 @@ public class UserService {
         if (user != null) {
             user.setName(userDetails.getName());
             user.setEmail(userDetails.getEmail());
-            user.setPassword(userDetails.getPassword());
+            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
             user.setRole(userDetails.getRole());
 
             return userRepository.save(user);

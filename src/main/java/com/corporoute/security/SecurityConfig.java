@@ -36,6 +36,15 @@ public class SecurityConfig {
 
                 .requestMatchers("/companies/**").hasRole("ADMIN")
 
+                .requestMatchers(HttpMethod.PUT,"/users/me/online")
+                .hasRole("DRIVER")
+
+                .requestMatchers(HttpMethod.PUT,"/users/me/offline")
+                .hasRole("DRIVER")
+
+                .requestMatchers(HttpMethod.PUT,"/users/me/location")
+                .hasRole("DRIVER")
+
                 .requestMatchers("/users/**").hasRole("ADMIN")
                 
                 .requestMatchers("/rides/my-bookings")
@@ -43,6 +52,9 @@ public class SecurityConfig {
 
                 .requestMatchers("/rides/my-assignments")
                 .hasRole("DRIVER")
+
+                .requestMatchers(HttpMethod.PUT, "/rides/*/cancel")
+                .hasRole("EMPLOYEE")
 
                 .requestMatchers(HttpMethod.GET, "/rides")
                 .hasRole("ADMIN")

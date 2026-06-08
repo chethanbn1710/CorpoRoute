@@ -6,12 +6,14 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import com.corporoute.entity.Company;
 import com.corporoute.entity.User;
+import com.corporoute.exception.InvalidRideStateException;
 import com.corporoute.repository.CompanyRepository;
 import com.corporoute.repository.UserRepository;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.corporoute.enums.Role;
 import java.util.List;
 
 @Service
@@ -31,11 +33,20 @@ public class UserService implements UserDetailsService {
 
     public User createUser(User user) {
 
-        Company company = companyRepository.findById(
-                user.getCompany().getId()
-        ).orElseThrow(() -> new RuntimeException("Company not found"));
+        if (user.getRole() == Role.EMPLOYEE) {
+            if (user.getCompany() == null) {
+                throw new RuntimeException("Employee must belong to a company");
+        }
 
-        user.setCompany(company);
+            Company company = companyRepository.findById(user.getCompany().getId())
+            .orElseThrow(() -> new RuntimeException("Company not found"));
+
+            user.setCompany(company);
+        }
+
+        if (user.getRole() == Role.DRIVER || user.getRole() == Role.ADMIN) {
+            user.setCompany(null);
+        }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
@@ -68,6 +79,35 @@ public class UserService implements UserDetailsService {
         }
 
         return null;
+    }
+
+    public User goOnline(String email) {
+
+        User driver = getUserByEmail(email);
+        if (driver.getRole() != Role.DRIVER) {
+            throw new InvalidRideStateException("Only drivers can go online");
+        }
+        driver.setAvailable(true);
+        return userRepository.save(driver);
+    }
+
+    public User goOffline(String email) {
+        User driver = getUserByEmail(email);
+        if (driver.getRole() != Role.DRIVER) {
+            throw new InvalidRideStateException("Only drivers can go offline");
+        }
+        driver.setAvailable(false);
+        return userRepository.save(driver);
+    }
+
+    public User updateLocation(String email, String location) {
+        User driver = getUserByEmail(email);
+        if (driver.getRole() != Role.DRIVER) {
+            throw new InvalidRideStateException("Only drivers can update location");
+        }
+
+        driver.setCurrentLocation(location);
+        return userRepository.save(driver);
     }
 
     public void deleteUser(Long id) {

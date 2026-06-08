@@ -66,6 +66,17 @@ public class RideController {
         return rideService.updateRide(id, ride);
     }
 
+    @PutMapping("/{id}/cancel")
+    public Ride cancelRide(@PathVariable Long id,
+            HttpServletRequest request) {
+
+        String token = request.getHeader("Authorization")
+                .replace("Bearer ", "");
+
+        String email = jwtUtil.extractUsername(token);
+        return rideService.cancelRide(id, email);
+    }
+
     @PutMapping("/{id}/accept")
     public Ride acceptRide(@PathVariable Long id,HttpServletRequest request) {
 

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.corporoute.entity.User;
 import com.corporoute.enums.Role;
 import com.corporoute.enums.RideStatus;
+import com.corporoute.repository.UserRepository;
 
 import com.corporoute.exception.CompanyNotFoundException;
 import com.corporoute.exception.CreditLimitExceededException;
@@ -24,14 +25,15 @@ public class RideService {
     private final RideRepository rideRepository;
     private final CompanyRepository companyRepository;
     private final UserService userService;
+    private final UserRepository userRepository;
 
-    public RideService(RideRepository rideRepository,
-            CompanyRepository companyRepository,
-            UserService userService) {
+    public RideService(RideRepository rideRepository, CompanyRepository companyRepository,
+            UserService userService, UserRepository userRepository) {
 
         this.rideRepository = rideRepository;
         this.companyRepository = companyRepository;
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     public List<Ride> getAllRides() {
@@ -39,31 +41,59 @@ public class RideService {
     }
 
     public Ride getRideById(Long id) {
-        return rideRepository.findById(id).orElse(null);
+        return rideRepository.findById(id)
+            .orElseThrow(() -> new RideNotFoundException("Ride not found"));
     }
 
     public Ride createRide(Ride ride, String email) {
 
-        Company company = companyRepository.findById(
-                ride.getCompany().getId())
-                .orElseThrow(() -> new CompanyNotFoundException("Company not found"));
+        User employee = userService.getUserByEmail(email);
+        Company company = employee.getCompany();
 
-        ride.setCompany(company);
+        if (company == null) {throw new CompanyNotFoundException(
+                    "Employee is not associated with any company");
+        }
 
-        BigDecimal newOutstanding = company.getOutstandingBalance().add(ride.getFare());
+        BigDecimal projectedExposure = company.getOutstandingBalance()
+                .add(company.getReservedCredit()).add(ride.getFare());
 
-        if (newOutstanding.compareTo(company.getCreditLimit()) > 0) {
+        if (projectedExposure.compareTo(company.getCreditLimit()) > 0) {
             throw new CreditLimitExceededException("Credit limit exceeded");
         }
 
-        User employee = userService.getUserByEmail(email);
+        company.setReservedCredit(company.getReservedCredit().add(ride.getFare()));
+
+        companyRepository.save(company);
 
         ride.setEmployee(employee);
+        ride.setCompany(company);
         ride.setDriver(null);
         ride.setStatus(RideStatus.PENDING);
 
-        company.setOutstandingBalance(newOutstanding);
+        return rideRepository.save(ride);
+    }
+
+
+    public Ride cancelRide(Long rideId, String employeeEmail) {
+
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+
+        User employee = userService.getUserByEmail(employeeEmail);
+
+        if (!ride.getEmployee().getId().equals(employee.getId())) {
+            throw new InvalidRideStateException("You can only cancel your own rides");
+        }
+
+        if (ride.getStatus() != RideStatus.PENDING) {
+            throw new InvalidRideStateException("Only pending rides can be cancelled");
+        }
+
+        Company company = ride.getCompany();
+        company.setReservedCredit(company.getReservedCredit().subtract(ride.getFare()));
+
         companyRepository.save(company);
+        ride.setStatus(RideStatus.CANCELLED);
 
         return rideRepository.save(ride);
     }
@@ -80,11 +110,18 @@ public class RideService {
         User driver = userService.getUserByEmail(driverEmail);
 
         if (driver.getRole() != Role.DRIVER) {
-            throw new RuntimeException( "Only drivers can accept rides");
+            throw new InvalidRideStateException( "Only drivers can accept rides");
+        }
+
+        if (!driver.getAvailable()) {
+            throw new InvalidRideStateException("Driver is offline");
         }
 
         ride.setDriver(driver);
         ride.setStatus(RideStatus.ACCEPTED);
+
+        driver.setAvailable(false);
+        userRepository.save(driver);
 
         return rideRepository.save(ride);
     }
@@ -92,7 +129,7 @@ public class RideService {
     public Ride completeRide(Long rideId, String driverEmail) {
 
         Ride ride = rideRepository.findById(rideId)
-            .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
 
         if (ride.getStatus() != RideStatus.ACCEPTED) {
             throw new InvalidRideStateException("Only accepted rides can be completed");
@@ -104,24 +141,28 @@ public class RideService {
             throw new InvalidRideStateException("Only assigned driver can complete this ride");
         }
 
+        Company company = ride.getCompany();
+        company.setReservedCredit(company.getReservedCredit().subtract(ride.getFare()));
+        company.setOutstandingBalance(company.getOutstandingBalance().add(ride.getFare()));
+        companyRepository.save(company);
+
         ride.setStatus(RideStatus.COMPLETED);
+
+        driver.setAvailable(true);
+        userRepository.save(driver);
+
         return rideRepository.save(ride);
     }
 
     public Ride updateRide(Long id, Ride rideDetails) {
 
-        Ride ride = rideRepository.findById(id).orElse(null);
+        Ride ride = rideRepository.findById(id)
+            .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+  
+        ride.setPickupLocation(rideDetails.getPickupLocation());
+        ride.setDropLocation(rideDetails.getDropLocation());
 
-        if (ride != null) {
-            ride.setPickupLocation(rideDetails.getPickupLocation());
-            ride.setDropLocation(rideDetails.getDropLocation());
-            ride.setFare(rideDetails.getFare());
-            ride.setStatus(rideDetails.getStatus());
-
-            return rideRepository.save(ride);
-        }
-
-        return null;
+        return rideRepository.save(ride);
     }
 
     public List<Ride> getMyBookedRides(String email) {

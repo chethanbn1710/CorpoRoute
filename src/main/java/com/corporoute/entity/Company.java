@@ -23,6 +23,9 @@ public class Company {
 
     private BigDecimal outstandingBalance;
 
+    @Column(nullable = false)
+    private BigDecimal reservedCredit = BigDecimal.ZERO;
+
     @OneToMany(mappedBy = "company")
     @JsonIgnore
     private List<User> users;

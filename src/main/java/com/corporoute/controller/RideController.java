@@ -29,16 +29,11 @@ public class RideController {
     }
 
     @PostMapping
-    public Ride createRide(
-            @RequestBody Ride ride,
-            HttpServletRequest request) {
+    public Ride createRide(@RequestBody Ride ride,HttpServletRequest request) {
 
         String authHeader = request.getHeader("Authorization");
-
         String token = authHeader.substring(7);
-
         String email = jwtUtil.extractUsername(token);
-
         return rideService.createRide(ride, email);
     }
 
@@ -47,12 +42,45 @@ public class RideController {
         return rideService.getRideById(id);
     }
 
+    @GetMapping("/my-bookings")
+    public List<Ride> myBookings(HttpServletRequest request) {
+
+        String token = request.getHeader("Authorization").substring(7);
+        String email = jwtUtil.extractUsername(token);
+        return rideService.getMyBookedRides(email);
+    }
+
+    @GetMapping("/my-assignments")
+    public List<Ride> myAssignments(HttpServletRequest request) {
+
+        String token = request.getHeader("Authorization").substring(7);
+        String email = jwtUtil.extractUsername(token);
+        return rideService.getMyAssignedRides(email);
+    }
+
     @PutMapping("/{id}")
     public Ride updateRide(
             @PathVariable Long id,
             @RequestBody Ride ride) {
 
         return rideService.updateRide(id, ride);
+    }
+
+    @PutMapping("/{id}/accept")
+    public Ride acceptRide(@PathVariable Long id,HttpServletRequest request) {
+
+        String authHeader = request.getHeader("Authorization");
+        String token = authHeader.substring(7);
+        String email = jwtUtil.extractUsername(token);
+        return rideService.acceptRide(id, email);
+    }
+
+    @PutMapping("/{id}/complete")
+    public Ride completeRide(@PathVariable Long id,HttpServletRequest request) {
+
+        String token = request.getHeader("Authorization").substring(7);
+        String email = jwtUtil.extractUsername(token);
+        return rideService.completeRide(id, email);
     }
 
     @DeleteMapping("/{id}")

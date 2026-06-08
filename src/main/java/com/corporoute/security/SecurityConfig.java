@@ -2,6 +2,7 @@ package com.corporoute.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -36,14 +37,31 @@ public class SecurityConfig {
                 .requestMatchers("/companies/**").hasRole("ADMIN")
 
                 .requestMatchers("/users/**").hasRole("ADMIN")
+                
+                .requestMatchers("/rides/my-bookings")
+                .hasRole("EMPLOYEE")
 
-                .requestMatchers("/rides/**")
-                .hasAnyRole("ADMIN", "EMPLOYEE", "DRIVER")
+                .requestMatchers("/rides/my-assignments")
+                .hasRole("DRIVER")
+
+                .requestMatchers(HttpMethod.GET, "/rides")
+                .hasRole("ADMIN")
+
+                .requestMatchers(HttpMethod.GET, "/rides/*")
+                .hasRole("ADMIN")
+
+                .requestMatchers(HttpMethod.POST, "/rides")
+                .hasRole("EMPLOYEE")
+
+                .requestMatchers(HttpMethod.PUT, "/rides/*/accept")
+                .hasRole("DRIVER")
+
+                .requestMatchers(HttpMethod.PUT, "/rides/*/complete")
+                .hasRole("DRIVER")
 
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(
-                    jwtFilter,
+            .addFilterBefore(jwtFilter,
                     UsernamePasswordAuthenticationFilter.class
             );
 

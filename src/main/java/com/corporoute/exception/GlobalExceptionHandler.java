@@ -28,4 +28,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", ex.getMessage()));
     }
+
+    @ExceptionHandler(RideNotFoundException.class)
+    public ResponseEntity<?> handleRideNotFound(RideNotFoundException ex) {
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidRideStateException.class)
+    public ResponseEntity<?> handleInvalidRideState(InvalidRideStateException ex) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(Map.of("error", ex.getMessage()));
+    }
 }

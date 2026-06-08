@@ -1,5 +1,9 @@
 package com.corporoute.service;
 
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
 import com.corporoute.entity.Company;
 import com.corporoute.entity.User;
 import com.corporoute.repository.CompanyRepository;
@@ -11,7 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
@@ -63,5 +67,20 @@ public class UserService {
 
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email)
+        throws UsernameNotFoundException {
+
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new UsernameNotFoundException("User not found"));
+
+        return org.springframework.security.core.userdetails.User
+            .withUsername(user.getEmail())
+            .password(user.getPassword())
+            .roles(user.getRole().name())
+            .build();
     }
 }

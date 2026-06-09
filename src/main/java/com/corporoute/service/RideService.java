@@ -6,6 +6,8 @@ import com.corporoute.repository.RideRepository;
 import com.corporoute.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 
+import com.corporoute.dto.DispatchCandidate;
+import com.corporoute.dto.DriverDistance;
 import com.corporoute.entity.User;
 import com.corporoute.enums.Role;
 import com.corporoute.enums.RideStatus;
@@ -17,7 +19,10 @@ import com.corporoute.repository.UserRepository;
 import com.corporoute.util.DistanceCalculator;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Comparator;
 
 @Service
 public class RideService {
@@ -70,6 +75,9 @@ public class RideService {
         ride.setDriver(null);
         ride.setStatus(RideStatus.PENDING);
 
+        ride.setDispatchRound(1);
+        ride.setDispatchStartedAt(LocalDateTime.now());
+
         return rideRepository.save(ride);
     }
 
@@ -98,17 +106,17 @@ public class RideService {
         return rideRepository.save(ride);
     }
 
-    public User findNearestDriver(Long rideId) {
+    public List<DispatchCandidate> findNearestDrivers(Long rideId, int limit) {
 
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new RideNotFoundException("Ride not found"));
 
         List<User> availableDrivers = userRepository.findByRoleAndAvailable(Role.DRIVER, true);
 
-        User nearestDriver = null;
-        double shortestDistance = Double.MAX_VALUE;
+        List<DriverDistance> driverDistances = new ArrayList<>();
 
         for (User driver : availableDrivers) {
+
             if (driver.getCurrentLatitude() == null || driver.getCurrentLongitude() == null) {
                 continue;
             }
@@ -117,13 +125,53 @@ public class RideService {
                     driver.getCurrentLatitude(), driver.getCurrentLongitude(),
                     ride.getPickupLatitude(), ride.getPickupLongitude());
 
-            if (distance < shortestDistance) {
-                shortestDistance = distance;
-                nearestDriver = driver;
-            }
+            driverDistances.add(new DriverDistance(driver, distance));
         }
 
-        return nearestDriver;
+        driverDistances.sort(Comparator.comparingDouble(DriverDistance::getDistance));
+
+        return driverDistances.stream().limit(limit).map(dd -> {
+
+            User driver = dd.getDriver();
+            double distance = Math.round(dd.getDistance() * 1000.0) / 1000.0;
+            long eta = Math.round((distance / 30.0) * 60);
+
+            return new DispatchCandidate(
+                    driver.getId(),
+                    driver.getName(),
+                    distance,
+                    eta
+            );
+        }).toList();
+    }
+
+    public List<DispatchCandidate> getDispatchRound(Long rideId, int round) {
+
+        int limit;
+        switch (round) {
+            case 1 -> limit = 1;
+            case 2 -> limit = 2;
+            case 3 -> limit = 3;
+            default -> limit = Integer.MAX_VALUE;
+        }
+
+        return findNearestDrivers(rideId, limit);
+    }
+
+    public long calculateETA(Long rideId) {
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+
+        DispatchCandidate candidate = findNearestDrivers(rideId, 1).get(0);
+        User driver = userService.getUserById(candidate.getDriverId());
+
+        double distanceKm = DistanceCalculator.calculateDistance(
+                driver.getCurrentLatitude(), driver.getCurrentLongitude(),
+                ride.getPickupLatitude(), ride.getPickupLongitude());
+
+        double averageSpeedKmph = 30.0;
+        double etaHours = distanceKm / averageSpeedKmph;
+        return Math.round(etaHours * 60);
     }
 
     public Ride acceptRide(Long rideId, String driverEmail) {

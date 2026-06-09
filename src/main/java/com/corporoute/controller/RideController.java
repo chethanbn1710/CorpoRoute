@@ -1,7 +1,7 @@
 package com.corporoute.controller;
 
+import com.corporoute.dto.DispatchCandidate;
 import com.corporoute.entity.Ride;
-import com.corporoute.entity.User;
 import com.corporoute.security.JwtUtil;
 import com.corporoute.service.RideService;
 
@@ -43,9 +43,17 @@ public class RideController {
         return rideService.getRideById(id);
     }
 
-    @GetMapping("/{id}/nearest-driver")
-    public User getNearestDriver(@PathVariable Long id) {
-        return rideService.findNearestDriver(id);
+    @GetMapping("/{id}/nearest-drivers")
+    public List<DispatchCandidate> getNearestDrivers(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "3") int limit) {
+
+        return rideService.findNearestDrivers(id, limit);
+    }
+
+    @GetMapping("/{id}/eta")
+    public Long getETA(@PathVariable Long id) {
+        return rideService.calculateETA(id);
     }
 
     @GetMapping("/my-bookings")
@@ -81,6 +89,14 @@ public class RideController {
 
         String email = jwtUtil.extractUsername(token);
         return rideService.cancelRide(id, email);
+    }
+
+    @GetMapping("/{id}/dispatch-round")
+    public List<DispatchCandidate> getDispatchRound(
+            @PathVariable Long id,
+            @RequestParam int round) {
+
+        return rideService.getDispatchRound(id, round);
     }
 
     @PutMapping("/{id}/accept")

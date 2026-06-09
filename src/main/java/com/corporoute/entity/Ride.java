@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import com.corporoute.enums.RideStatus;
 
+import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 @Entity
@@ -30,6 +31,10 @@ public class Ride {
     private Double dropLongitude;
 
     private BigDecimal fare;
+
+    private Integer dispatchRound;
+
+    private LocalDateTime dispatchStartedAt;
 
     @Enumerated(EnumType.STRING)
     private RideStatus status;

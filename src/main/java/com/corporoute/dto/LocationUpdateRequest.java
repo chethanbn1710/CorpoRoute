@@ -1,14 +1,10 @@
 package com.corporoute.dto;
+import lombok.Data;
 
+@Data
 public class LocationUpdateRequest {
 
-    private String location;
+    private Double currentLatitude;
+    private Double currentLongitude;
 
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
 }

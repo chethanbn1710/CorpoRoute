@@ -80,7 +80,7 @@ public class UserController {
         String email = jwtUtil.extractUsername(token);
 
         return userService.updateLocation(
-            email, request.getLocation());
+            email, request.getCurrentLatitude(), request.getCurrentLongitude());
     }
 
     @DeleteMapping("/{id}")

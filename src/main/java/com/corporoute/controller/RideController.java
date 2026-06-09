@@ -1,6 +1,7 @@
 package com.corporoute.controller;
 
 import com.corporoute.entity.Ride;
+import com.corporoute.entity.User;
 import com.corporoute.security.JwtUtil;
 import com.corporoute.service.RideService;
 
@@ -40,6 +41,11 @@ public class RideController {
     @GetMapping("/{id}")
     public Ride getRideById(@PathVariable Long id) {
         return rideService.getRideById(id);
+    }
+
+    @GetMapping("/{id}/nearest-driver")
+    public User getNearestDriver(@PathVariable Long id) {
+        return rideService.findNearestDriver(id);
     }
 
     @GetMapping("/my-bookings")

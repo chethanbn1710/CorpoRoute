@@ -9,12 +9,12 @@ import org.springframework.stereotype.Service;
 import com.corporoute.entity.User;
 import com.corporoute.enums.Role;
 import com.corporoute.enums.RideStatus;
-import com.corporoute.repository.UserRepository;
-
 import com.corporoute.exception.CompanyNotFoundException;
 import com.corporoute.exception.CreditLimitExceededException;
 import com.corporoute.exception.InvalidRideStateException;
 import com.corporoute.exception.RideNotFoundException;
+import com.corporoute.repository.UserRepository;
+import com.corporoute.util.DistanceCalculator;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -98,6 +98,34 @@ public class RideService {
         return rideRepository.save(ride);
     }
 
+    public User findNearestDriver(Long rideId) {
+
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+
+        List<User> availableDrivers = userRepository.findByRoleAndAvailable(Role.DRIVER, true);
+
+        User nearestDriver = null;
+        double shortestDistance = Double.MAX_VALUE;
+
+        for (User driver : availableDrivers) {
+            if (driver.getCurrentLatitude() == null || driver.getCurrentLongitude() == null) {
+                continue;
+            }
+
+            double distance = DistanceCalculator.calculateDistance(
+                    driver.getCurrentLatitude(), driver.getCurrentLongitude(),
+                    ride.getPickupLatitude(), ride.getPickupLongitude());
+
+            if (distance < shortestDistance) {
+                shortestDistance = distance;
+                nearestDriver = driver;
+            }
+        }
+
+        return nearestDriver;
+    }
+
     public Ride acceptRide(Long rideId, String driverEmail) {
 
         Ride ride = rideRepository.findById(rideId)
@@ -159,8 +187,11 @@ public class RideService {
         Ride ride = rideRepository.findById(id)
             .orElseThrow(() -> new RideNotFoundException("Ride not found"));
   
-        ride.setPickupLocation(rideDetails.getPickupLocation());
-        ride.setDropLocation(rideDetails.getDropLocation());
+        ride.setPickupLatitude(rideDetails.getPickupLatitude());
+        ride.setPickupLongitude(rideDetails.getPickupLongitude());
+
+        ride.setDropLatitude(rideDetails.getDropLatitude());
+        ride.setDropLongitude(rideDetails.getDropLongitude());
 
         return rideRepository.save(ride);
     }

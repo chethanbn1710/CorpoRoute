@@ -100,13 +100,15 @@ public class UserService implements UserDetailsService {
         return userRepository.save(driver);
     }
 
-    public User updateLocation(String email, String location) {
+    public User updateLocation(String email, Double latitude, Double longitude) {
         User driver = getUserByEmail(email);
         if (driver.getRole() != Role.DRIVER) {
             throw new InvalidRideStateException("Only drivers can update location");
         }
+        
+        driver.setCurrentLatitude(latitude);
+        driver.setCurrentLongitude(longitude);
 
-        driver.setCurrentLocation(location);
         return userRepository.save(driver);
     }
 

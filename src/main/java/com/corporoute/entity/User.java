@@ -3,6 +3,8 @@ package com.corporoute.entity;
 import com.corporoute.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
@@ -28,8 +30,10 @@ public class User {
     @Column(nullable = false)
     private Boolean available = false;
 
-    private String currentLocation;
+    private Double currentLatitude;
+    private Double currentLongitude;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "company_id")
     private Company company;

@@ -23,9 +23,11 @@ public class Ride {
     @JoinColumn(name = "driver_id")
     private User driver;
 
-    private String pickupLocation;
+    private Double pickupLatitude;
+    private Double pickupLongitude;
 
-    private String dropLocation;
+    private Double dropLatitude;
+    private Double dropLongitude;
 
     private BigDecimal fare;
 

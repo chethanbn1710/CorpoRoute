@@ -1,24 +1,18 @@
 package com.corporoute.service;
 
-import com.corporoute.entity.Ride;
-import com.corporoute.entity.Company;
-import com.corporoute.repository.RideRepository;
-import com.corporoute.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 
 import com.corporoute.dto.DispatchCandidate;
 import com.corporoute.dto.DriverDistance;
-import com.corporoute.entity.User;
-import com.corporoute.enums.Role;
-import com.corporoute.enums.RideStatus;
-import com.corporoute.exception.CompanyNotFoundException;
-import com.corporoute.exception.CreditLimitExceededException;
-import com.corporoute.exception.InvalidRideStateException;
-import com.corporoute.exception.RideNotFoundException;
-import com.corporoute.repository.UserRepository;
+import com.corporoute.entity.*;
+import com.corporoute.enums.*;
+import com.corporoute.exception.*;
+import com.corporoute.repository.*;
 import com.corporoute.util.DistanceCalculator;
 
+
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -79,6 +73,23 @@ public class RideService {
         ride.setDispatchStartedAt(LocalDateTime.now());
 
         return rideRepository.save(ride);
+    }
+
+    public int getCurrentDispatchRound(Long rideId) {
+
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+
+        long elapsedSeconds = Duration.between(
+                ride.getDispatchStartedAt(),
+                LocalDateTime.now()
+        ).getSeconds();
+
+        if (elapsedSeconds < 15) return 1;
+        if (elapsedSeconds < 30) return 2;
+        if (elapsedSeconds < 45) return 3;
+
+        return 4;
     }
 
 
@@ -145,9 +156,10 @@ public class RideService {
         }).toList();
     }
 
-    public List<DispatchCandidate> getDispatchRound(Long rideId, int round) {
+    public List<DispatchCandidate> getDispatchRound(Long rideId) {
 
         int limit;
+        int round = getCurrentDispatchRound(rideId);
         switch (round) {
             case 1 -> limit = 1;
             case 2 -> limit = 2;

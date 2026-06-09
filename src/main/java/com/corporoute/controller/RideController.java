@@ -96,7 +96,14 @@ public class RideController {
             @PathVariable Long id,
             @RequestParam int round) {
 
-        return rideService.getDispatchRound(id, round);
+        return rideService.getDispatchRound(id);
+    }
+
+    @GetMapping("/{id}/dispatch-candidates")
+    public List<DispatchCandidate> getDispatchCandidates(
+            @PathVariable Long id) {
+
+        return rideService.getDispatchRound(id);
     }
 
     @PutMapping("/{id}/accept")

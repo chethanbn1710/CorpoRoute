@@ -91,14 +91,6 @@ public class RideController {
         return rideService.cancelRide(id, email);
     }
 
-    @GetMapping("/{id}/dispatch-round")
-    public List<DispatchCandidate> getDispatchRound(
-            @PathVariable Long id,
-            @RequestParam int round) {
-
-        return rideService.getDispatchRound(id);
-    }
-
     @GetMapping("/{id}/dispatch-candidates")
     public List<DispatchCandidate> getDispatchCandidates(
             @PathVariable Long id) {

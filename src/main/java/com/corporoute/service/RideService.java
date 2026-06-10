@@ -69,7 +69,6 @@ public class RideService {
         ride.setDriver(null);
         ride.setStatus(RideStatus.PENDING);
 
-        ride.setDispatchRound(1);
         ride.setDispatchStartedAt(LocalDateTime.now());
 
         return rideRepository.save(ride);
@@ -85,11 +84,8 @@ public class RideService {
                 LocalDateTime.now()
         ).getSeconds();
 
-        if (elapsedSeconds < 15) return 1;
-        if (elapsedSeconds < 30) return 2;
-        if (elapsedSeconds < 45) return 3;
-
-        return 4;
+        int round = (int)(elapsedSeconds / 15) + 1;
+        return Math.min(round, 4);
     }
 
 

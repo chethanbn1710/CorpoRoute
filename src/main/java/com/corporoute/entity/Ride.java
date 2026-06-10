@@ -32,8 +32,6 @@ public class Ride {
 
     private BigDecimal fare;
 
-    private Integer dispatchRound;
-
     private LocalDateTime dispatchStartedAt;
 
     @Enumerated(EnumType.STRING)

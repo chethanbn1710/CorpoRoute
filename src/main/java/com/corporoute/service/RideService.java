@@ -3,6 +3,7 @@ package com.corporoute.service;
 import org.springframework.stereotype.Service;
 
 import com.corporoute.dto.DispatchCandidate;
+import com.corporoute.dto.DispatchInvitationResponse;
 import com.corporoute.dto.DriverDistance;
 import com.corporoute.entity.*;
 import com.corporoute.enums.*;
@@ -25,14 +26,17 @@ public class RideService {
     private final CompanyRepository companyRepository;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final DispatchInvitationRepository dispatchInvitationRepository;
 
     public RideService(RideRepository rideRepository, CompanyRepository companyRepository,
-            UserService userService, UserRepository userRepository) {
+            UserService userService, UserRepository userRepository, 
+            DispatchInvitationRepository dispatchInvitationRepository) {
 
         this.rideRepository = rideRepository;
         this.companyRepository = companyRepository;
         this.userService = userService;
         this.userRepository = userRepository;
+        this.dispatchInvitationRepository = dispatchInvitationRepository;
     }
 
     public List<Ride> getAllRides() {
@@ -68,10 +72,12 @@ public class RideService {
         ride.setCompany(company);
         ride.setDriver(null);
         ride.setStatus(RideStatus.PENDING);
-
         ride.setDispatchStartedAt(LocalDateTime.now());
 
-        return rideRepository.save(ride);
+        Ride savedRide = rideRepository.save(ride);
+        generateDispatchInvitations(savedRide.getId());
+
+        return savedRide;
     }
 
     public int getCurrentDispatchRound(Long rideId) {
@@ -86,6 +92,34 @@ public class RideService {
 
         int round = (int)(elapsedSeconds / 15) + 1;
         return Math.min(round, 4);
+    }
+
+    public void generateDispatchInvitations(Long rideId) {
+
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+
+        int round = getCurrentDispatchRound(rideId);
+
+        List<DispatchCandidate> candidates = getDispatchRound(rideId);
+
+        for (DispatchCandidate candidate : candidates) {
+
+            User driver = userRepository.findById(candidate.getDriverId())
+                    .orElseThrow(() ->new UserNotFoundException("Driver not found"));
+
+            DispatchInvitation invitation = new DispatchInvitation();
+
+            invitation.setRide(ride);
+            invitation.setDriver(driver);
+
+            invitation.setStatus(DispatchStatus.OFFERED);
+            invitation.setDispatchRound(round);
+            invitation.setOfferedAt(LocalDateTime.now());
+            invitation.setExpiresAt(LocalDateTime.now().plusSeconds(15));
+
+            dispatchInvitationRepository.save(invitation);
+        }
     }
 
 
@@ -166,12 +200,41 @@ public class RideService {
         return findNearestDrivers(rideId, limit);
     }
 
+    public List<DispatchInvitationResponse> getPendingInvitations(String driverEmail) {
+
+        User driver = userService.getUserByEmail(driverEmail);
+
+        List<DispatchInvitation> invitations =
+                dispatchInvitationRepository.findByDriverAndStatusAndExpiresAtAfter(
+                driver, DispatchStatus.OFFERED, LocalDateTime.now());
+
+        return invitations.stream().map(invitation -> {
+
+            Ride ride = invitation.getRide();
+
+            return new DispatchInvitationResponse(
+                invitation.getId(), ride.getId(),
+                ride.getEmployee().getName(),
+                ride.getPickupLatitude(),
+                ride.getPickupLongitude(),
+                ride.getFare(),
+                invitation.getDispatchRound());
+        })
+        .toList();
+    }
+
     public long calculateETA(Long rideId) {
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new RideNotFoundException("Ride not found"));
 
-        DispatchCandidate candidate = findNearestDrivers(rideId, 1).get(0);
-        User driver = userService.getUserById(candidate.getDriverId());
+        User driver;
+
+        if (ride.getDriver() != null) {
+            driver = ride.getDriver();
+        } else {
+            DispatchCandidate candidate = findNearestDrivers(rideId, 1).get(0);
+            driver = userService.getUserById(candidate.getDriverId());
+        }
 
         double distanceKm = DistanceCalculator.calculateDistance(
                 driver.getCurrentLatitude(), driver.getCurrentLongitude(),
@@ -180,6 +243,47 @@ public class RideService {
         double averageSpeedKmph = 30.0;
         double etaHours = distanceKm / averageSpeedKmph;
         return Math.round(etaHours * 60);
+    }
+
+    public Ride acceptInvitation(Long invitationId, String driverEmail) {
+
+        DispatchInvitation invitation = dispatchInvitationRepository
+                .findById(invitationId)
+                .orElseThrow(() -> new RuntimeException("Invitation not found"));
+
+        User driver = userService.getUserByEmail(driverEmail);
+
+        if (!invitation.getDriver().getId().equals(driver.getId())) {
+            throw new RuntimeException("This invitation does not belong to you");
+        }
+
+        if (invitation.getStatus() != DispatchStatus.OFFERED) {
+            throw new RuntimeException("Invitation is no longer active");
+        }
+
+        Ride ride = invitation.getRide();
+        ride.setDriver(driver);
+        ride.setStatus(RideStatus.ACCEPTED);
+        rideRepository.save(ride);
+
+        invitation.setStatus(DispatchStatus.ACCEPTED);
+        dispatchInvitationRepository.save(invitation);
+
+
+        List<DispatchInvitation> invitations =
+            dispatchInvitationRepository.findByRide(ride);
+
+        for (DispatchInvitation other : invitations) {
+
+            if (!other.getId().equals(invitation.getId())
+                    && other.getStatus() == DispatchStatus.OFFERED) {
+
+                other.setStatus(DispatchStatus.EXPIRED);
+                dispatchInvitationRepository.save(other);
+            }
+        }
+
+        return ride;
     }
 
     public Ride acceptRide(Long rideId, String driverEmail) {

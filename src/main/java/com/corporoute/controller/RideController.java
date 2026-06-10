@@ -1,6 +1,7 @@
 package com.corporoute.controller;
 
 import com.corporoute.dto.DispatchCandidate;
+import com.corporoute.dto.DispatchInvitationResponse;
 import com.corporoute.entity.Ride;
 import com.corporoute.security.JwtUtil;
 import com.corporoute.service.RideService;
@@ -96,6 +97,27 @@ public class RideController {
             @PathVariable Long id) {
 
         return rideService.getDispatchRound(id);
+    }
+
+    @GetMapping("/driver/pending-invitations")
+    public List<DispatchInvitationResponse> getPendingInvitations(
+            HttpServletRequest request) {
+
+        String token = request.getHeader("Authorization").substring(7);
+        String email = jwtUtil.extractUsername(token);
+
+        return rideService.getPendingInvitations(email);
+    }
+
+    @PutMapping("/invitations/{invitationId}/accept")
+    public Ride acceptInvitation(
+            @PathVariable Long invitationId,
+            HttpServletRequest request) {
+
+        String token = request.getHeader("Authorization").substring(7);
+        String email = jwtUtil.extractUsername(token);
+
+        return rideService.acceptInvitation(invitationId, email);
     }
 
     @PutMapping("/{id}/accept")

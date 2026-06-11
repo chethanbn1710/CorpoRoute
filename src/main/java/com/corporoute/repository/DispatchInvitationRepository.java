@@ -21,5 +21,7 @@ public interface DispatchInvitationRepository extends JpaRepository<DispatchInvi
     List<DispatchInvitation> findByRide(Ride ride);
 
     boolean existsByRideAndDriver(Ride ride, User driver);
+
+    boolean existsByRideAndDispatchRound(Ride ride, Integer dispatchRound);
         
 }

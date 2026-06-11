@@ -223,6 +223,17 @@ public class RideService {
         return findNearestDrivers(rideId, limit);
     }
 
+    public void processDispatchRound(Ride ride) {
+
+        int round = getCurrentDispatchRound(ride.getId());
+
+        boolean alreadyGenerated = dispatchInvitationRepository.existsByRideAndDispatchRound(ride, round);
+
+        if (alreadyGenerated) {return;}
+
+        generateInvitationsForRound(ride, round);
+    }
+
     public List<DispatchInvitationResponse> getPendingInvitations(String driverEmail) {
 
         User driver = userService.getUserByEmail(driverEmail);

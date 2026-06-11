@@ -129,7 +129,7 @@ public class RideController {
     }
 
     @PutMapping("/{id}/accept")
-    public Ride acceptRide(@PathVariable Long id,HttpServletRequest request) {
+    public Ride acceptRide(@PathVariable Long id, HttpServletRequest request) {
 
         String authHeader = request.getHeader("Authorization");
         String token = authHeader.substring(7);

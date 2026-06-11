@@ -2,6 +2,7 @@ package com.corporoute.controller;
 
 import com.corporoute.dto.DispatchCandidate;
 import com.corporoute.dto.DispatchInvitationResponse;
+import com.corporoute.entity.DispatchInvitation;
 import com.corporoute.entity.Ride;
 import com.corporoute.security.JwtUtil;
 import com.corporoute.service.RideService;
@@ -107,6 +108,13 @@ public class RideController {
         String email = jwtUtil.extractUsername(token);
 
         return rideService.getPendingInvitations(email);
+    }
+
+    @GetMapping("/{rideId}/invitations")
+    public List<DispatchInvitation> getRideInvitations(
+            @PathVariable Long rideId) {
+
+        return rideService.getRideInvitations(rideId);
     }
 
     @PutMapping("/invitations/{invitationId}/accept")

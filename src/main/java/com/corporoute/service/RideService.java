@@ -75,7 +75,7 @@ public class RideService {
         ride.setDispatchStartedAt(LocalDateTime.now());
 
         Ride savedRide = rideRepository.save(ride);
-        generateDispatchInvitations(savedRide.getId());
+        generateInvitationsForRound(savedRide, 1);
 
         return savedRide;
     }
@@ -94,32 +94,55 @@ public class RideService {
         return Math.min(round, 4);
     }
 
-    public void generateDispatchInvitations(Long rideId) {
+    private void generateInvitationsForRound(Ride ride, int round) {
 
-        Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+        int limit;
 
-        int round = getCurrentDispatchRound(rideId);
+        switch (round) {
+            case 1 -> limit = 1;
+            case 2 -> limit = 2;
+            case 3 -> limit = 3;
+            default -> limit = Integer.MAX_VALUE;
+        }
 
-        List<DispatchCandidate> candidates = getDispatchRound(rideId);
+        List<DispatchCandidate> candidates =
+                findNearestDrivers(ride.getId(), limit);
 
         for (DispatchCandidate candidate : candidates) {
 
-            User driver = userRepository.findById(candidate.getDriverId())
-                    .orElseThrow(() ->new UserNotFoundException("Driver not found"));
+            User driver = userService.getUserById(
+                    candidate.getDriverId());
 
-            DispatchInvitation invitation = new DispatchInvitation();
+            if (dispatchInvitationRepository
+                    .existsByRideAndDriver(ride, driver)) {
+                continue;
+            }
+
+            DispatchInvitation invitation =
+                    new DispatchInvitation();
 
             invitation.setRide(ride);
             invitation.setDriver(driver);
 
-            invitation.setStatus(DispatchStatus.OFFERED);
             invitation.setDispatchRound(round);
+            invitation.setStatus(DispatchStatus.OFFERED);
+
             invitation.setOfferedAt(LocalDateTime.now());
-            invitation.setExpiresAt(LocalDateTime.now().plusSeconds(15));
+            invitation.setExpiresAt(
+                    LocalDateTime.now().plusSeconds(15));
 
             dispatchInvitationRepository.save(invitation);
         }
+    }
+
+    
+
+    public List<DispatchInvitation> getRideInvitations(Long rideId) {
+
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RideNotFoundException("Ride not found"));
+
+        return dispatchInvitationRepository.findByRide(ride);
     }
 
 
